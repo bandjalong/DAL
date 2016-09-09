@@ -46,7 +46,8 @@ use DateTime::Format::MySQL;
 use Digest::MD5 qw(md5 md5_hex md5_base64);
 use Crypt::Random qw( makerandom );
 use JSON::XS qw(encode_json decode_json);
-
+use File::Copy;
+    
 sub setup {
 
   my $self = shift;
@@ -2885,12 +2886,8 @@ sub add_multimedia_runmode {
 
   my $stored_multimedia_file = "${dest_storage_path}/$hash_filename";
   my $tmp_multimedia_file = $self->authen->get_upload_file();
-  copy_file($tmp_multimedia_file, $stored_multimedia_file, 1);
-
-  if ( !(-e $stored_multimedia_file) ) {
-
-    $self->logger->debug('File not copied');
-
+  if (1 != copy($tmp_multimedia_file, $stored_multimedia_file, 1)) {
+    $self->logger->debug("File not copied ($tmp_multimedia_file -> $stored_multimedia_file)");
     my $del_sql = 'DELETE FROM multimedia WHERE MultimediaId=?';
     my $del_sth = $dbh_write->prepare($del_sql);
     $del_sth->execute($multimedia_id);
