@@ -1196,58 +1196,50 @@ sub add_record {
 }
 
 sub run_test_case {
-
   my $case_file = $_[0];
   my $force     = $_[1];
   my $logger    = $_[2];
+  my $depth     = $_[3];
+  defined($depth) || ($depth = 0);
+  ++$depth;
 
-  $logger->debug(" $case_file: run test");
-
+  $logger->debug(" $case_file: run_test_case start (depth $depth)");
   if ( !(-r $case_file) ) {
-
     die "$case_file cannot be read.";
   }
 
   my $start_time = [gettimeofday()];
-
   my $tcase_data_ref = XMLin($case_file, ForceArray => 1);
 
   if (defined $tcase_data_ref->{'CaseInfo'}->[0]->{'Description'}) {
-
     print DateTime->now() . " $case_file: " . $tcase_data_ref->{'CaseInfo'}->[0]->{'Description'} . "\n";
   }
 
   my $output_format = 'xml';
-
   if (defined $tcase_data_ref->{'CaseInfo'}->[0]->{'OutputFormat'}) {
-
     $output_format = $tcase_data_ref->{'CaseInfo'}->[0]->{'OutputFormat'};
   }
 
+  # Skip running this case if we have recently run it:
   if ($force != 1) {
-
     if (defined $tcase_data_ref->{'RunInfo'}) {
-
       my $last_run_time = $tcase_data_ref->{'RunInfo'}->[0]->{'Time'};
       my $cur_time      = time();
-
       my $second_ago = $cur_time - $last_run_time;
       if ( $second_ago < $SESSION_TIME_SECOND ) {
-
         print DateTime->now() . " $case_file: was successfully run $second_ago seconds ago.\n";
+        $logger->debug(" $case_file: run_test_case stop force (depth $depth)");
         return;
       }
     }
   }
 
+  # Run the parent test cases first:
   my @sorted_parent = map { $_->[1] }
                       sort { $a->[0] <=> $b->[0] }
                       map { [$_->{'Order'}, $_] } @{$tcase_data_ref->{'Parent'}};
-
   for my $parent (@sorted_parent) {
-
     if (defined $parent->{'Order'}) {
-
       $logger->debug("$case_file: parent order: " . $parent->{'Order'});
     }
 
@@ -1255,39 +1247,29 @@ sub run_test_case {
     my $case_force = 0;
 
     if (defined $parent->{'Force'}) {
-
       $case_force = $parent->{'Force'};
     }
 
-    run_test_case($case_file, $case_force, $logger);
+    run_test_case($case_file, $case_force, $logger, $depth);
   }
 
   my $parameter = get_case_parameter($tcase_data_ref->{'INPUT'}, $logger);
-
   my $url = $tcase_data_ref->{'CaseInfo'}->[0]->{'TargetURL'};
-
   if ($url !~ /http\:\/\//i) {
-
     $url = make_dal_url($url);
   }
 
   $logger->debug("URL: $url");
-
   $parameter->{'URL'} = $url;
-
   my $unsorted_match = $tcase_data_ref->{'Match'};
 
   my @temp_sorted_match;
 
   for my $m (@{$unsorted_match}) {
-
     my $order = 0;
-
     if (defined $m->{'Order'}) {
-
       $order = $m->{'Order'};
     }
-
     push(@temp_sorted_match, [$order, $m]);
   }
 
@@ -1297,36 +1279,31 @@ sub run_test_case {
   my $case_err       = 0;
   my $attr_csv       = '';
   my $return_id_href = undef;
+
+  # Make the DAL call (either from custom method, or standard_request):
   if (defined $tcase_data_ref->{'CaseInfo'}->[0]->{'CustomMethod'}) {
-
     my $custom_method = $tcase_data_ref->{'CaseInfo'}->[0]->{'CustomMethod'};
-
     ($case_err, $attr_csv, $return_id_href) = $custom_method->($parameter, $output_format, \@sorted_match, $logger);
   }
   else {
-
     ($case_err, $attr_csv, $return_id_href) = standard_request($parameter, $output_format, \@sorted_match, $logger);
   }
 
   if (defined $return_id_href) {
-
     $tcase_data_ref->{'ReturnId'} = [$return_id_href];
   }
 
   my $case_type = $tcase_data_ref->{'CaseInfo'}->[0]->{'Type'};
 
   if (defined $tcase_data_ref->{'CaseInfo'}->[0]->{'Description'}) {
-
     print DateTime->now() . " $case_file: " . $tcase_data_ref->{'CaseInfo'}->[0]->{'Description'} . "\n";
   }
 
   if ($case_err == 0) {
-
     print DateTime->now() . " $case_file: succeeded\n";
     $tcase_data_ref->{'RunInfo'} = [{'Success' => 1, 'Time' => time()}];
   }
   else {
-
     print DateTime->now() . " $case_file: failed | $attr_csv\n";
     $tcase_data_ref->{'RunInfo'} = [{'Success' => 0, 'Time' => 0}];
   }
@@ -1334,18 +1311,15 @@ sub run_test_case {
   XMLout($tcase_data_ref, OutputFile => $case_file, RootName => 'TestCase');
 
   if ($case_type eq 'BLOCKING') {
-
     if ($case_err) {
-
       print DateTime->now() . " $case_file: BLOCKING\n";
       die "STOP\n";
     }
   }
 
   my $elapsed_time = tv_interval($start_time);
-
   $logger->debug("Run time: $elapsed_time (seconds)");
-
+  $logger->debug(" $case_file: run_test_case stop done (depth $depth)");
   return $case_err;
 }
 
