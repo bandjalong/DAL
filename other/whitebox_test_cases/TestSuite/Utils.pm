@@ -1,3 +1,18 @@
+# Copyright (c) 2016, Diversity Arrays Technology, All rights reserved.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# Author    : Puthick Hok
+# Version   : 2.3.0 build 1040
+
 package Utils;
 require Exporter;
 
@@ -14,67 +29,34 @@ use XML::XSLT;
 use JSON::XS;
 use Cwd;
 
-# Copyright (c) 2015, Diversity Arrays Technology, All rights reserved.
-
-# COPYRIGHT AND LICENSE
-# 
-# Copyright (C) 2014 by Diversity Arrays Technology Pty Ltd
-# 
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# Author    : Puthick Hok
-# Version   : 2.3.0 build 1040
-
 our @ISA      = qw(Exporter);
 our @EXPORT   = qw(get_write_token switch_group standard_request add_record
                    logout run_test_case add_record_upload claim_grp_ownership
                    dal_base_url make_dal_url login is_add_case who_has_no_dependent
                    is_the_same delete_test_record read_file make_random_number
                   );
-
 my $dal_base_url_file = 'dal_base_url.conf';
-
 our $SESSION_TIME_SECOND  = 300;
-
 our $ACCEPT_HEADER_LOOKUP = {'JSON' => 'application/json',
                              'XML'  => 'text/xml',
                            };
-
 our $HTTP_TIME_OUT        = 6000;
 
 sub make_dal_url {
-
   my $action_path = shift;
-
   $action_path =~ s/^\///;#remove leading '/'
-
   open(my $fh, '<', $dal_base_url_file) or die "Couldn't open $dal_base_url_file : $!";
-
   my $dal_base_url = <$fh>;
   close $fh;
-
   $dal_base_url =~ s/^\s+//;#remove leading whitespace
   $dal_base_url =~ s/\/*\s*$/\//;#remove trailing whitespace and ensure one trailing '/'
-
   return $dal_base_url . $action_path;
 }
 
 sub get_write_token {
-
   my $path2cfg = '.';
-
   if ($_[0]) { $path2cfg = $_[0]; }
-
   my $filename = 'write_token';
-
   open(WT_FHANDLE, "< ${path2cfg}/$filename") || die "Can't read write token file.";
   my $line = <WT_FHANDLE>;
   chomp($line);
@@ -1667,14 +1649,12 @@ sub delete_test_record {
     print "Response code: " . $response->code() . "\n";
 
     if ($response->code() != 200) {
-
       $delete_err = 1;
       last;
     }
   }
 
   if ($delete_err == 0) {
-
     delete($tcase_data_ref->{'ReturnId'});
     XMLout($tcase_data_ref, OutputFile => $case_file, RootName => 'TestCase');
   }
@@ -1683,7 +1663,6 @@ sub delete_test_record {
 }
 
 sub make_random_number {
-
   my $len = 8;
   my %args = @_;
   if ($args{-len}) { $len = $args{-len}; }
