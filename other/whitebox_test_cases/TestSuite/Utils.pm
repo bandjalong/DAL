@@ -1088,7 +1088,6 @@ sub add_record {
   my $url        = $parameter->{'URL'};
 
   while($url =~ /:(\w+)\/?/ ) {
-
     my $para_name = $1;
     my $para_val  = $parameter->{$para_name};
     $url =~ s/:${para_name}/${para_val}/;
@@ -1117,9 +1116,7 @@ sub add_record {
   my $para_order    = q{};
   my $sending_param = [];
   for my $param_name (keys(%{$parameter})) {
-
     if ($excl_para_name->{$param_name}) {
-
       next;
     }
 
@@ -1154,14 +1151,11 @@ sub add_record {
   my $return_id_href = undef;
 
   if ($response->code() == 200) {
-
     my $return_data = {};
     if (uc($output_format) eq 'XML') {
-
       $return_data = XMLin($msg_xml, ForceArray => 1);
     }
     elsif (uc($output_format) eq 'JSON') {
-
       $return_data = decode_json($msg_xml);
     }
     $return_id_href = $return_data->{'ReturnId'}->[0];
@@ -1170,7 +1164,6 @@ sub add_record {
   my @is_match_return = is_match($response, $output_format, $match, $logger);
 
   if ($is_match_return[0] == 1) {
-
     print "$msg_xml\n";
   }
 
